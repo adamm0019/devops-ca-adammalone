@@ -71,16 +71,16 @@ jobs:
             npm install
           
             # stopping and removing the container if it exists currently
-            docker stop simple-express-app || true
-            docker rm simple-express-app || true
+            docker stop devops-ca || true
+            docker rm devops-ca || true
           
             # building the new docker image
             docker build -t simple-express-app .
           
             # running the new container
-            docker run -d -p 8080:8080 --name simple-express-app simple-express-app
+            docker run -d -p 8080:8080 --name devops-ca simple-express-app
           
-            docker ps | grep simple-express-app
+            docker ps | grep devops-ca
           
             # clean up
             docker system prune -f
