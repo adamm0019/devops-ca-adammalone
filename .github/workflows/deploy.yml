@@ -1,4 +1,4 @@
-name: ci/cd pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -40,6 +40,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Debug SSH connection
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo SSH connection successful"
+
       - name: Deploy to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
@@ -49,8 +55,10 @@ jobs:
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
           
           ssh ec2-user@$EC2_HOST '
+            # Pull the latest code
             cd ~/SimpleApplication || mkdir -p ~/SimpleApplication
           
+            # If directory exists but is not a git repo, initialize it
             if [ ! -d .git ]; then
               git init
               git remote add origin https://github.com/${{ github.repository }}.git
@@ -58,7 +66,7 @@ jobs:
           
             git fetch --all
             git reset --hard origin/main
-          
+            
             # installing the dependencies
             npm install
           
@@ -70,8 +78,16 @@ jobs:
             docker build -t simple-express-app .
           
             # running the new container
-            docker run -d -p 80:8080 --name simple-express-app simple-express-app
+            docker run -d -p 8080:8080 --name simple-express-app simple-express-app
+          
+            docker ps | grep simple-express-app
           
             # clean up
             docker system prune -f
+          
+            # some checks to ensure the step doesnt fail if a command fails
+            sudo systemctl status nginx || true
+            sudo systemctl restart nginx || true
+          
+            echo "web app deployed"
           '
